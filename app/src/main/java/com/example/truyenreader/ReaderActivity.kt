@@ -84,18 +84,16 @@ class ReaderActivity : AppCompatActivity() {
         val url = chapterUrl
         thread {
             var pages: ChapterPages? = null
-            var blocked = false
             try {
                 pages = TruyenQQSource.fetchChapter(url)
-            } catch (e: TruyenQQSource.BlockedException) {
-                blocked = true
             } catch (e: Exception) {
                 pages = null
             }
             runOnUiThread {
                 if (pages != null && pages.images.isNotEmpty()) {
                     showPages(pages)
-                } else if (blocked) {
+                } else {
+                    // Du phong WebView cho moi truong hop tai loi / khong co anh
                     WebFetcher.fetchHtml(this, url) { html ->
                         val parsed = if (html.isNullOrEmpty()) null else
                             TruyenQQSource.parseChapter(
@@ -104,8 +102,6 @@ class ReaderActivity : AppCompatActivity() {
                         if (parsed != null && parsed.images.isNotEmpty()) showPages(parsed)
                         else loadFailed()
                     }
-                } else {
-                    loadFailed()
                 }
             }
         }

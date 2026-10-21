@@ -8,12 +8,38 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 
 /**
- * Phuong an du phong khi nguon chan Jsoup bang Cloudflare:
- * tai trang bang WebView that (co JS nhu trinh duyet), cho render xong
- * roi lay HTML da render de parse nhu binh thuong.
+ * Phuong an du phong khi Jsoup bi Cloudflare chan:
+ * tai trang bang WebView that, gia lap TRINH DUYET DESKTOP (ban desktop cua
+ * web chua san toan bo danh sach chuong trong HTML), tu bam cac nut
+ * "Xem them" va cuon het cac hop cuon truoc khi lay HTML da render.
  * Luon chay tren main thread.
  */
 object WebFetcher {
+
+    private const val DESKTOP_UA =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+
+    // JS: bam moi phan tu "Xem them / Xem tat ca" + cuon xuong cuoi trang va
+    // cuon het cac hop co thanh cuon rieng (noi chua danh sach chuong)
+    private const val EXPAND_JS = """
+        (function(){
+          var texts = ['xem thêm','xem tất cả','xem toàn bộ','xem hết'];
+          var els = document.querySelectorAll('a,button,div,span');
+          for (var i=0;i<els.length;i++){
+            var t = (els[i].textContent||'').trim().toLowerCase();
+            if (texts.indexOf(t) >= 0){ try{ els[i].click(); }catch(e){} }
+          }
+          window.scrollTo(0, document.body.scrollHeight);
+          var all = document.querySelectorAll('*');
+          for (var j=0;j<all.length;j++){
+            var el = all[j];
+            if (el.scrollHeight > el.clientHeight + 50 && el.clientHeight > 80){
+              el.scrollTop = el.scrollHeight;
+            }
+          }
+          return 'done';
+        })()
+    """
 
     @SuppressLint("SetJavaScriptEnabled")
     fun fetchHtml(context: Context, url: String, callback: (String?) -> Unit) {
@@ -22,36 +48,38 @@ object WebFetcher {
             val webView = WebView(context)
             webView.settings.javaScriptEnabled = true
             webView.settings.domStorageEnabled = true
-            webView.settings.userAgentString =
-                "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+            webView.settings.useWideViewPort = true
+            webView.settings.loadWithOverviewMode = true
+            webView.settings.userAgentString = DESKTOP_UA
             var done = false
+
+            fun finish(html: String?) {
+                if (done) return
+                done = true
+                try { webView.destroy() } catch (e: Exception) { /* bo qua */ }
+                callback(html)
+            }
+
             webView.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, pageUrl: String?) {
                     // Cho Cloudflare / JS render xong
                     main.postDelayed({
-                        if (!done) {
-                            view?.evaluateJavascript(
-                                "(function(){return document.documentElement.outerHTML;})()"
-                            ) { result ->
+                        if (done) return@postDelayed
+                        view?.evaluateJavascript(EXPAND_JS) {
+                            // Cho noi dung mo rong tai xong roi moi lay HTML
+                            main.postDelayed({
                                 if (!done) {
-                                    done = true
-                                    val html = decode(result)
-                                    try { webView.destroy() } catch (e: Exception) { /* bo qua */ }
-                                    callback(html)
+                                    view?.evaluateJavascript(
+                                        "(function(){return document.documentElement.outerHTML;})()"
+                                    ) { result -> finish(decode(result)) }
                                 }
-                            }
+                            }, 2500)
                         }
                     }, 3000)
                 }
             }
-            // Timeout tong 25 giay
-            main.postDelayed({
-                if (!done) {
-                    done = true
-                    try { webView.stopLoading(); webView.destroy() } catch (e: Exception) { /* bo qua */ }
-                    callback(null)
-                }
-            }, 25000)
+            // Timeout tong 35 giay
+            main.postDelayed({ finish(null) }, 35000)
             webView.loadUrl(url)
         }
     }

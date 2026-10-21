@@ -21,7 +21,8 @@ data class ComicDetail(
     val status: String,
     val genres: String,
     val description: String,
-    val chapters: List<ComicChapter>   // da sap xep tang dan theo so chuong
+    val chapters: List<ComicChapter>,  // da sap xep tang dan theo so chuong
+    val totalChapters: Int = 0         // "Tong so chap" web cong bo (0 = khong doc duoc)
 )
 
 data class ChapterPages(

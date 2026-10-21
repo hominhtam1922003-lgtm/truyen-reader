@@ -11,7 +11,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import kotlin.concurrent.thread
 
 class DetailActivity : AppCompatActivity() {
@@ -38,8 +37,7 @@ class DetailActivity : AppCompatActivity() {
         title = preTitle
         findViewById<TextView>(R.id.tvDetailTitle).text = preTitle
         if (preCover.isNotEmpty()) {
-            Glide.with(this).load(preCover).centerCrop()
-                .into(findViewById<ImageView>(R.id.ivDetailCover))
+            ImageLoader.cover(findViewById(R.id.ivDetailCover), preCover)
         }
         updateFavoriteButton()
 
@@ -70,32 +68,39 @@ class DetailActivity : AppCompatActivity() {
     private fun loadDetail() {
         thread {
             var d: ComicDetail? = null
-            var blocked = false
             try {
                 d = TruyenQQSource.fetchDetail(storyUrl)
-            } catch (e: TruyenQQSource.BlockedException) {
-                blocked = true
             } catch (e: Exception) {
-                blocked = false
+                d = null
             }
             runOnUiThread {
-                if (d != null && d.chapters.isNotEmpty()) {
-                    showDetail(d)
-                } else if (blocked) {
-                    // Du phong Cloudflare bang WebView
+                val current = d
+                // Du khi tai duoc: neu so chuong it hon "Tong so chap" web cong bo
+                // (dau hieu ban mobile chi co ~20 chap) van phai thu WebView ban desktop
+                val truncated = current != null && current.totalChapters > 0 &&
+                    current.chapters.size < current.totalChapters
+                if (current != null && current.chapters.isNotEmpty() && !truncated) {
+                    showDetail(current)
+                } else {
+                    // Du phong bang WebView (ban desktop, tu bam "Xem them")
                     WebFetcher.fetchHtml(this, storyUrl) { html ->
                         val parsed = if (html.isNullOrEmpty()) null else
                             TruyenQQSource.parseDetail(
                                 TruyenQQSource.parseHtml(html, TruyenQQSource.BASE), storyUrl
                             )
-                        if (parsed != null && parsed.chapters.isNotEmpty()) {
-                            showDetail(parsed)
+                        // Chon ban nao nhieu chuong hon
+                        val best = when {
+                            parsed == null -> current
+                            current == null -> parsed
+                            parsed.chapters.size > current.chapters.size -> parsed
+                            else -> current
+                        }
+                        if (best != null && best.chapters.isNotEmpty()) {
+                            showDetail(best)
                         } else {
                             loadFailed()
                         }
                     }
-                } else {
-                    loadFailed()
                 }
             }
         }
@@ -124,8 +129,7 @@ class DetailActivity : AppCompatActivity() {
             if (d.genres.isNotEmpty()) "Thể loại: ${d.genres}" else ""
         findViewById<TextView>(R.id.tvDetailDesc).text = d.description
         if (d.comic.cover.isNotEmpty()) {
-            Glide.with(this).load(d.comic.cover).centerCrop()
-                .into(findViewById<ImageView>(R.id.ivDetailCover))
+            ImageLoader.cover(findViewById(R.id.ivDetailCover), d.comic.cover)
         }
         findViewById<TextView>(R.id.tvChapterCount).text =
             "Danh sách chương (${d.chapters.size} chap — đã tải toàn bộ)"

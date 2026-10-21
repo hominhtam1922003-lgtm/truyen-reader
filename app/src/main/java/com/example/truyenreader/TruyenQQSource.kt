@@ -62,13 +62,54 @@ object TruyenQQSource {
         return parseList(fetchDoc(url))
     }
 
+    /** Lay URL anh that tu the img: uu tien cac thuoc tinh lazy-load, cuoi cung moi la src. */
+    private fun imgUrl(img: org.jsoup.nodes.Element): String {
+        for (attr in listOf("data-src", "data-original", "data-lazy-src", "data-url", "src")) {
+            val v = img.absUrl(attr)
+            if (v.isNotEmpty() && !v.contains("placeholder", true) && !v.endsWith("loading.gif")) {
+                return v
+            }
+        }
+        return img.absUrl("src")
+    }
+
     fun search(keyword: String): List<Comic> {
         val q = java.net.URLEncoder.encode(keyword, "UTF-8")
-        return try {
-            parseList(fetchDoc("$BASE/tim-kiem?q=$q"))
+        // 1) Do form tim kiem that tren trang chu cua web -> dung dung action + ten tham so
+        try {
+            val home = fetchDoc("$BASE/")
+            for (form in home.select("form")) {
+                val action = form.absUrl("action")
+                val lower = action.lowercase()
+                if (!lower.contains("tim") && !lower.contains("search")) continue
+                val input = form.select("input[name]").firstOrNull {
+                    val t = it.attr("type")
+                    t.isEmpty() || t == "text" || t == "search"
+                } ?: continue
+                val param = input.attr("name").ifEmpty { "q" }
+                val sep = if (action.contains("?")) "&" else "?"
+                val list = parseList(fetchDoc("$action$sep$param=$q"))
+                if (list.isNotEmpty()) return list
+            }
         } catch (e: Exception) {
-            emptyList()
+            // Bo qua, thu cac mau URL du phong ben duoi
         }
+        // 2) Cac mau URL tim kiem pho bien cua ho web nay
+        for (pattern in listOf(
+            "$BASE/tim-kiem?q=$q",
+            "$BASE/tim-kiem.html?q=$q",
+            "$BASE/tim-truyen?q=$q",
+            "$BASE/search?q=$q",
+            "$BASE/tim-kiem?keyword=$q"
+        )) {
+            try {
+                val list = parseList(fetchDoc(pattern))
+                if (list.isNotEmpty()) return list
+            } catch (e: Exception) {
+                // Thu mau tiep theo
+            }
+        }
+        return emptyList()
     }
 
     fun parseList(doc: Document): List<Comic> {
@@ -79,8 +120,7 @@ object TruyenQQSource {
             val img = a.selectFirst("img") ?: continue
             val title = img.attr("alt").ifBlank { a.attr("title") }.ifBlank { a.text() }.trim()
             if (title.isEmpty()) continue
-            var cover = img.absUrl("data-src")
-            if (cover.isEmpty()) cover = img.absUrl("src")
+            val cover = imgUrl(img)
             // Tim chuong moi nhat + thoi gian trong khoi chua item nay
             var latest = ""
             var updated = ""
@@ -120,13 +160,14 @@ object TruyenQQSource {
         val coverImg = doc.select("img").firstOrNull { it.attr("alt").trim() == title && title.isNotEmpty() }
             ?: doc.select("img").firstOrNull { it.absUrl("src").contains("ebook") }
         if (coverImg != null) {
-            cover = coverImg.absUrl("data-src").ifBlank { coverImg.absUrl("src") }
+            cover = imgUrl(coverImg)
         }
         val genres = doc.select("a[href*=/the-loai/]").map { it.text().trim() }
             .filter { it.isNotEmpty() }.distinct().joinToString(", ")
 
         var author = ""
         var status = ""
+        var totalChapters = 0
         for (row in doc.select("tr, li")) {
             val t = row.text()
             if (author.isEmpty() && t.contains("Tác giả", true)) {
@@ -135,6 +176,10 @@ object TruyenQQSource {
             }
             if (status.isEmpty() && t.contains("Tình trạng", true)) {
                 status = t.substringAfter(":").trim()
+            }
+            if (totalChapters == 0 && t.contains("Tổng số chap", true)) {
+                totalChapters = Regex("""[\d.,]+""").find(t.substringAfter(":", ""))
+                    ?.value?.replace(".", "")?.replace(",", "")?.toIntOrNull() ?: 0
             }
         }
 
@@ -173,7 +218,8 @@ object TruyenQQSource {
             status = status,
             genres = genres,
             description = description,
-            chapters = chapters
+            chapters = chapters,
+            totalChapters = totalChapters
         )
     }
 
@@ -185,8 +231,7 @@ object TruyenQQSource {
         val images = ArrayList<String>()
         val pagePattern = Regex("""/\d+/[\d.]+/\d+\.(png|jpg|jpeg|webp)""", RegexOption.IGNORE_CASE)
         for (img in doc.select("img")) {
-            var src = img.absUrl("data-src")
-            if (src.isEmpty()) src = img.absUrl("src")
+            val src = imgUrl(img)
             if (src.isEmpty()) continue
             if (src.contains("truyenvua.com") || pagePattern.containsMatchIn(src)) {
                 if (!images.contains(src)) images.add(src)

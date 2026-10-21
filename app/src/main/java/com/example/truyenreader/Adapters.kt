@@ -6,8 +6,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.Target
 
 class ComicGridAdapter(
     private var items: List<Comic>,
@@ -35,10 +33,7 @@ class ComicGridAdapter(
         h.tvTitle.text = c.title
         val sub = listOf(c.latestChapter, c.updatedText).filter { it.isNotEmpty() }.joinToString(" • ")
         h.tvLatest.text = sub
-        Glide.with(h.itemView).load(c.cover)
-            .placeholder(android.R.drawable.ic_menu_gallery)
-            .error(android.R.drawable.ic_menu_gallery)
-            .centerCrop().into(h.iv)
+        ImageLoader.cover(h.iv, c.cover)
         h.itemView.setOnClickListener { onClick(c) }
     }
 
@@ -70,10 +65,7 @@ class ComicRowAdapter(
         val (c, sub) = items[pos]
         h.tvTitle.text = c.title
         h.tvSub.text = sub
-        Glide.with(h.itemView).load(c.cover)
-            .placeholder(android.R.drawable.ic_menu_gallery)
-            .error(android.R.drawable.ic_menu_gallery)
-            .centerCrop().into(h.iv)
+        ImageLoader.cover(h.iv, c.cover)
         h.itemView.setOnClickListener { onClick(c) }
     }
 
@@ -119,11 +111,7 @@ class PageAdapter(
     }
 
     override fun onBindViewHolder(h: VH, pos: Int) {
-        Glide.with(h.itemView).load(images[pos])
-            .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
-            .placeholder(android.R.drawable.ic_menu_gallery)
-            .error(android.R.drawable.ic_menu_report_image)
-            .into(h.iv)
+        ImageLoader.page(h.iv, images[pos])
     }
 
     override fun getItemCount() = images.size

@@ -57,3 +57,9 @@ Mỗi lần sửa code rồi push lên nhánh `main`, Actions tự build APK m�
 - Quyền thông báo: trên Android 13+ app sẽ xin quyền POST_NOTIFICATIONS
   khi mở lần đầu; từ chối thì mọi tính năng khác vẫn dùng bình thường,
   chỉ không có thông báo chap mới.
+
+## Ban 2.1
+
+- Fix loi anh khong tai duoc: gan Referer + User-Agent trinh duyet cho moi anh (CDN cua nguon chan tai anh tran).
+- Fix tim kiem: tu do form tim kiem that tren trang chu + cac endpoint du phong.
+- Full chuong: WebView du phong dung giao dien desktop, tu bam "Xem them"; ke ca khi Jsoup tai duoc nhung thieu chuong so voi "Tong so chap", app van thu lay ban day du hon.

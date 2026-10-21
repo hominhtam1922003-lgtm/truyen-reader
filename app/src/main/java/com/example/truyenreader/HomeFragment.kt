@@ -93,14 +93,9 @@ class HomeFragment : Fragment() {
                     val known = comics.map { it.url }.toSet()
                     comics.addAll(list.filter { it.url !in known })
                     adapter.submit(ArrayList(comics))
-                } else if (error is TruyenQQSource.BlockedException) {
+                } else {
+                    // Bat ky loi/ket qua rong nao cung thu duong WebView truoc khi bao loi
                     loadViaWebView(reset)
-                } else if (reset && comics.isEmpty()) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Không tải được danh sách. Kéo xuống để thử lại.",
-                        Toast.LENGTH_LONG
-                    ).show()
                 }
             }
         }
