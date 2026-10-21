@@ -18,6 +18,7 @@ import androidx.work.WorkerParameters
 class NewChapterWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
+        RemoteConfig.resolveBlocking(applicationContext)
         val db = DbRepo(applicationContext)
         val favorites = db.favorites()
         for ((comic, knownLatest) in favorites) {

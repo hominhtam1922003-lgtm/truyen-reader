@@ -33,10 +33,10 @@ class ReaderActivity : AppCompatActivity() {
         setContentView(R.layout.activity_reader)
         db = DbRepo(this)
 
-        storyUrl = intent.getStringExtra(EXTRA_STORY_URL) ?: run { finish(); return }
+        storyUrl = TruyenQQSource.rebase(intent.getStringExtra(EXTRA_STORY_URL) ?: run { finish(); return })
         storyTitle = intent.getStringExtra(EXTRA_STORY_TITLE) ?: ""
         cover = intent.getStringExtra(EXTRA_COVER) ?: ""
-        chapterUrl = intent.getStringExtra(EXTRA_CHAPTER_URL) ?: run { finish(); return }
+        chapterUrl = TruyenQQSource.rebase(intent.getStringExtra(EXTRA_CHAPTER_URL) ?: run { finish(); return })
         chapterName = intent.getStringExtra(EXTRA_CHAPTER_NAME) ?: ""
 
         findViewById<Button>(R.id.btnPrev).setOnClickListener { moveChapter(-1) }

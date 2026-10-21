@@ -40,6 +40,8 @@ class MainActivity : AppCompatActivity() {
 
         requestNotificationPermission()
         scheduleNewChapterChecks()
+        // Xac dinh ten mien nguon dang song (chong web doi ten mien)
+        RemoteConfig.resolveAsync(applicationContext)
     }
 
     private fun show(fragment: Fragment) {

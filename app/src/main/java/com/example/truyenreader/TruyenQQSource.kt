@@ -20,7 +20,26 @@ import org.jsoup.nodes.Document
  */
 object TruyenQQSource {
 
-    const val BASE = "https://truyenqqko.com"
+    const val DEFAULT_BASE = "https://truyenqqko.com"
+
+    /** Ten mien dang dung that (RemoteConfig cap nhat khi web doi ten mien). */
+    @Volatile
+    var activeBase: String = DEFAULT_BASE
+
+    /** Moi code cu doc BASE se tu nhan ten mien dang hoat dong. */
+    val BASE: String
+        get() = activeBase
+
+    /**
+     * URL da luu (yeu thich / lich su) co the con tro ve ten mien cu da chet.
+     * Neu URL thuoc he truyen (co /truyen-tranh/) thi doi host sang ten mien dang dung.
+     */
+    fun rebase(url: String): String {
+        if (!url.contains("/truyen-tranh/")) return url
+        val host = Regex("""^https?://[^/]+""").find(url)?.value ?: return url
+        return if (host == activeBase) url else activeBase + url.substring(host.length)
+    }
+
     private const val UA =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
@@ -35,7 +54,8 @@ object TruyenQQSource {
         return m?.groupValues?.get(1) ?: ""
     }
 
-    fun fetchDoc(url: String): Document {
+    fun fetchDoc(rawUrl: String): Document {
+        val url = rebase(rawUrl)
         val doc = Jsoup.connect(url)
             .userAgent(UA)
             .header("Accept-Language", "vi-VN,vi;q=0.9,en;q=0.8")

@@ -81,6 +81,7 @@ class BrowseFragment : Fragment() {
         val targetPage = page
         setRefreshing(true)
         thread {
+            RemoteConfig.awaitReady(3500)
             var list: List<Comic> = emptyList()
             var error: Exception? = null
             try {

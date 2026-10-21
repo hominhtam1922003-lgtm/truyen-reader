@@ -30,7 +30,7 @@ class DetailActivity : AppCompatActivity() {
         setContentView(R.layout.activity_detail)
         db = DbRepo(this)
 
-        storyUrl = intent.getStringExtra(EXTRA_URL) ?: run { finish(); return }
+        storyUrl = TruyenQQSource.rebase(intent.getStringExtra(EXTRA_URL) ?: run { finish(); return })
         val preTitle = intent.getStringExtra(EXTRA_TITLE) ?: ""
         val preCover = intent.getStringExtra(EXTRA_COVER) ?: ""
 

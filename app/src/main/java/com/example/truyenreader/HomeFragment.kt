@@ -107,6 +107,7 @@ class HomeFragment : Fragment() {
         setLoading(true)
         val p = page
         thread {
+            RemoteConfig.awaitReady(3500)
             var list: List<Comic> = emptyList()
             var error: Exception? = null
             try {
