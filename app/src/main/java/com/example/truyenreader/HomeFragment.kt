@@ -31,7 +31,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val rv = view.findViewById<RecyclerView>(R.id.rvComics)
-        rv.layoutManager = GridLayoutManager(requireContext(), 2)
+        rv.layoutManager = GridLayoutManager(requireContext(), 3)
         adapter = ComicGridAdapter(comics) { comic -> openDetail(comic) }
         rv.adapter = adapter
 

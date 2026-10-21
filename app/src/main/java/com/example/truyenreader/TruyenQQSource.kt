@@ -53,6 +53,23 @@ object TruyenQQSource {
         return doc
     }
 
+    /** Trang danh sach "truyen moi cap nhat" thuan (dung cho tab Moi). */
+    fun fetchNewPage(page: Int): List<Comic> =
+        parseList(fetchDoc("$BASE/truyen-moi-cap-nhat/trang-$page"))
+
+    /** Danh sach truyen hot: thu cac duong dan pho bien cua ho web nay. */
+    fun fetchHot(): List<Comic> {
+        for (path in listOf("/truyen-hot", "/truyen-hot.html", "/top-truyen", "/bang-xep-hang")) {
+            try {
+                val list = parseList(fetchDoc("$BASE$path"))
+                if (list.isNotEmpty()) return list
+            } catch (e: Exception) {
+                // Thu duong dan tiep theo
+            }
+        }
+        return fetchLatestPage(1)
+    }
+
     fun parseHtml(html: String, baseUrl: String): Document = Jsoup.parse(html, baseUrl)
 
     // ---------------- Danh sach truyen ----------------

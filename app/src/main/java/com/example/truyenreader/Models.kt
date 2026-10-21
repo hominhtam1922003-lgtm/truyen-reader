@@ -37,7 +37,9 @@ data class HistoryItem(
     val cover: String,
     val chapterName: String,
     val chapterUrl: String,
-    val readAt: Long
+    val readAt: Long,
+    /** So chuong da doc cua truyen nay (chi co nghia voi danh sach lich su da gop theo truyen). */
+    val chaptersRead: Int = 1
 )
 
 /** Giu danh sach chuong tam thoi khi chuyen tu Detail sang Reader (tranh Intent qua lon voi truyen >1000 chap). */

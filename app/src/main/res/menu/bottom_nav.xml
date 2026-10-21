@@ -5,6 +5,14 @@
         android:icon="@android:drawable/ic_menu_gallery"
         android:title="Trang chủ" />
     <item
+        android:id="@+id/nav_new"
+        android:icon="@android:drawable/ic_menu_today"
+        android:title="Mới" />
+    <item
+        android:id="@+id/nav_hot"
+        android:icon="@android:drawable/ic_menu_view"
+        android:title="Hot" />
+    <item
         android:id="@+id/nav_favorites"
         android:icon="@android:drawable/star_big_on"
         android:title="Yêu thích" />

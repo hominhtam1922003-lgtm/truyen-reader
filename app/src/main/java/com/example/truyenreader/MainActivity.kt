@@ -25,7 +25,14 @@ class MainActivity : AppCompatActivity() {
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> show(HomeFragment())
-                R.id.nav_favorites -> show(FavoritesFragment())
+                R.id.nav_new -> show(BrowseFragment.newInstance(BrowseFragment.KIND_NEW))
+                R.id.nav_hot -> show(BrowseFragment.newInstance(BrowseFragment.KIND_HOT))
+                R.id.nav_favorites -> {
+                    // Thong bao chap moi gan voi truyen yeu thich:
+                    // chua co quyen thi xin lai tai day (Android 13+)
+                    requestNotificationPermission()
+                    show(FavoritesFragment())
+                }
                 R.id.nav_history -> show(HistoryFragment())
             }
             true

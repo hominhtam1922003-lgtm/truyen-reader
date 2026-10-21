@@ -72,8 +72,9 @@ class HistoryFragment : Fragment() {
         val fmt = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault())
         rv.adapter = ComicRowAdapter(
             items.map { h ->
+                val progress = if (h.chaptersRead > 1) " • Đã đọc ${h.chaptersRead} chương" else ""
                 Comic(h.title, h.storyUrl, h.cover) to
-                    "${h.chapterName} • ${fmt.format(Date(h.readAt))}"
+                    "Đang đọc: ${h.chapterName}$progress • ${fmt.format(Date(h.readAt))}"
             }
         ) { comic ->
             val i = Intent(requireContext(), DetailActivity::class.java)

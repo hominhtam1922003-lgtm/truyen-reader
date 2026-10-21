@@ -4,8 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import java.io.ByteArrayInputStream
 
 /**
  * Phuong an du phong khi Jsoup bi Cloudflare chan:
@@ -47,6 +50,8 @@ object WebFetcher {
         main.post {
             val webView = WebView(context)
             webView.settings.javaScriptEnabled = true
+            webView.settings.javaScriptCanOpenWindowsAutomatically = false
+            webView.settings.setSupportMultipleWindows(false)
             webView.settings.domStorageEnabled = true
             webView.settings.useWideViewPort = true
             webView.settings.loadWithOverviewMode = true
@@ -61,6 +66,23 @@ object WebFetcher {
             }
 
             webView.webViewClient = object : WebViewClient() {
+
+                // CHAN QUANG CAO: moi request toi cac mang quang cao/tracking
+                // deu bi cat ngay trong WebView nay - quang cao cua web
+                // khong bao gio cham duoc vao app
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? {
+                    val host = request?.url?.host?.lowercase() ?: return null
+                    val blocked = AD_HOST_MARKERS.any { host.contains(it) }
+                    return if (blocked) {
+                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                    } else {
+                        null
+                    }
+                }
+
                 override fun onPageFinished(view: WebView?, pageUrl: String?) {
                     // Cho Cloudflare / JS render xong
                     main.postDelayed({
@@ -83,6 +105,16 @@ object WebFetcher {
             webView.loadUrl(url)
         }
     }
+
+    /** Dau hieu nhan dien ten mien quang cao / tracking pho bien. */
+    private val AD_HOST_MARKERS = listOf(
+        "doubleclick", "googlesyndication", "googleadservices", "adservice",
+        "ads.", ".ads", "ad-", "-ad.", "advertising", "adnxs", "adskeeper",
+        "popads", "popcash", "propellerads", "exoclick", "adsterra", "hilltopads",
+        "mgid", "outbrain", "taboola", "criteo", "pubmatic", "rubiconproject",
+        "smartadserver", "amazon-adsystem", "adform", "openx", "revcontent",
+        "ziddu", "bidvertiser", "trafficjunky", "juicyads", "clickadu", "adcash"
+    )
 
     private fun decode(jsonString: String?): String? {
         if (jsonString == null || jsonString == "null") return null

@@ -63,3 +63,11 @@ Mỗi lần sửa code rồi push lên nhánh `main`, Actions tự build APK m�
 - Fix loi anh khong tai duoc: gan Referer + User-Agent trinh duyet cho moi anh (CDN cua nguon chan tai anh tran).
 - Fix tim kiem: tu do form tim kiem that tren trang chu + cac endpoint du phong.
 - Full chuong: WebView du phong dung giao dien desktop, tu bam "Xem them"; ke ca khi Jsoup tai duoc nhung thieu chuong so voi "Tong so chap", app van thu lay ban day du hon.
+
+## Ban 2.2
+
+- Lich su gop theo truyen: moi truyen 1 dong (chuong doc gan nhat + so chuong da doc).
+- Them tab Moi (truyen moi cap nhat, phan trang day du) va tab Hot.
+- Giao dien gon: luoi 3 cot, the truyen nho hon, hien duoc nhieu truyen hon.
+- Chan quang cao ngay trong WebView du phong (blocklist ten mien ads), tat mo cua so popup.
+- Xin lai quyen thong bao khi vao tab Yeu thich (Android 13+); them quyen ACCESS_NETWORK_STATE.

@@ -91,17 +91,24 @@ class DbRepo(context: Context) :
         writableDatabase.insert("history", null, v)
     }
 
-    fun history(limit: Int = 100): List<HistoryItem> {
+    /**
+     * Lich su GOM THEO TRUYEN: moi truyen chi 1 dong - chuong doc gan nhat
+     * cua truyen do (SQLite lay cac cot con lai tu dong co read_at lon nhat
+     * trong nhom) kem so chuong da doc.
+     */
+    fun history(limit: Int = 200): List<HistoryItem> {
         val list = ArrayList<HistoryItem>()
         val c = readableDatabase.rawQuery(
-            "SELECT story_url,title,cover,chapter_name,chapter_url,read_at " +
-                "FROM history ORDER BY read_at DESC LIMIT ?", arrayOf(limit.toString())
+            "SELECT story_url,title,cover,chapter_name,chapter_url,MAX(read_at),COUNT(*) " +
+                "FROM history GROUP BY story_url ORDER BY 6 DESC LIMIT ?",
+            arrayOf(limit.toString())
         )
         while (c.moveToNext()) {
             list.add(
                 HistoryItem(
                     c.getString(0) ?: "", c.getString(1) ?: "", c.getString(2) ?: "",
-                    c.getString(3) ?: "", c.getString(4) ?: "", c.getLong(5)
+                    c.getString(3) ?: "", c.getString(4) ?: "", c.getLong(5),
+                    chaptersRead = c.getInt(6)
                 )
             )
         }
