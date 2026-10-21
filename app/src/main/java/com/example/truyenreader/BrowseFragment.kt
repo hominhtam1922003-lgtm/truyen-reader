@@ -46,7 +46,7 @@ class BrowseFragment : Fragment() {
         // An o tim kiem (chi tab Trang chu moi co)
         view.findViewById<View>(R.id.etSearch)?.let { (it.parent as? View)?.visibility = View.GONE }
 
-        adapter = ComicGridAdapter { comic ->
+        adapter = ComicGridAdapter(comics) { comic ->
             val i = Intent(requireContext(), DetailActivity::class.java)
             i.putExtra(DetailActivity.EXTRA_URL, comic.url)
             i.putExtra(DetailActivity.EXTRA_TITLE, comic.title)
