@@ -8,7 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Ghim bản Ubuntu ổn định, tránh bản mới nhất đang chuyển đổi gây lỗi lạ
+    runs-on: ubuntu-24.04
     steps:
       - name: Lấy code
         uses: actions/checkout@v4
@@ -19,11 +20,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Cài Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Cài nền tảng Android 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Kiểm tra Android SDK có sẵn trên máy chạy
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" || true
+          ls "$ANDROID_HOME/build-tools" || true
 
       - name: Cài Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
