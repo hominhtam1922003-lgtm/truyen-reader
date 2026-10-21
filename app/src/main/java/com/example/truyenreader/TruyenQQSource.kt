@@ -67,7 +67,7 @@ object TruyenQQSource {
                 // Thu duong dan tiep theo
             }
         }
-        return fetchLatestPage(1)
+        return fetchLatest(1)
     }
 
     fun parseHtml(html: String, baseUrl: String): Document = Jsoup.parse(html, baseUrl)
@@ -105,7 +105,8 @@ object TruyenQQSource {
                 } ?: continue
                 val param = input.attr("name").ifEmpty { "q" }
                 val sep = if (action.contains("?")) "&" else "?"
-                val list = parseList(fetchDoc("$action$sep$param=$q"))
+                val doc = fetchDoc("$action$sep$param=$q")
+                val list = parseList(doc).ifEmpty { parseListLoose(doc) }
                 if (list.isNotEmpty()) return list
             }
         } catch (e: Exception) {
@@ -120,7 +121,8 @@ object TruyenQQSource {
             "$BASE/tim-kiem?keyword=$q"
         )) {
             try {
-                val list = parseList(fetchDoc(pattern))
+                val doc = fetchDoc(pattern)
+                val list = parseList(doc).ifEmpty { parseListLoose(doc) }
                 if (list.isNotEmpty()) return list
             } catch (e: Exception) {
                 // Thu mau tiep theo
@@ -129,7 +131,12 @@ object TruyenQQSource {
         return emptyList()
     }
 
-    fun parseList(doc: Document): List<Comic> {
+    /**
+     * Doc danh sach truyen tu 1 trang da render.
+     * strict = true: bat buoc thay thong tin chuong gan truyen (trang chu / moi cap nhat).
+     * strict = false: chi can link truyen + anh bia (trang ket qua tim kiem co cau truc long hon).
+     */
+    fun parseList(doc: Document, strict: Boolean = true): List<Comic> {
         val result = LinkedHashMap<String, Comic>()
         for (a in doc.select("a[href]")) {
             val href = a.absUrl("href").substringBefore("?").trimEnd('/')
@@ -163,6 +170,33 @@ object TruyenQQSource {
             } else if (old.latestChapter.isEmpty() && latest.isNotEmpty()) {
                 result[href] = old.copy(latestChapter = latest, updatedText = updated)
             }
+        }
+        return result.values.toList()
+    }
+
+    /**
+     * Cach doc LONG hon cho trang ket qua tim kiem: link truyen va anh bia
+     * co the nam o 2 the <a> khac nhau trong cung 1 khoi item.
+     */
+    fun parseListLoose(doc: Document): List<Comic> {
+        val result = LinkedHashMap<String, Comic>()
+        for (a in doc.select("a[href]")) {
+            val href = a.absUrl("href").substringBefore("?").trimEnd('/')
+            if (!detailPathRegex.containsMatchIn(href) || chapRegex.containsMatchIn(href)) continue
+            if (result.containsKey(href)) continue
+            var container: org.jsoup.nodes.Element? = a
+            var img: org.jsoup.nodes.Element? = a.selectFirst("img")
+            var depth = 0
+            while (img == null && container != null && depth < 4) {
+                container = container.parent()
+                img = container?.selectFirst("img")
+                depth++
+            }
+            val title = a.text().trim()
+                .ifBlank { a.attr("title").trim() }
+                .ifBlank { img?.attr("alt")?.trim() ?: "" }
+            if (title.isEmpty()) continue
+            result[href] = Comic(title, href, img?.let { imgUrl(it) } ?: "")
         }
         return result.values.toList()
     }
