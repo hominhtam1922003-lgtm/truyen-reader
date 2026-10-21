@@ -90,9 +90,20 @@ object TruyenQQSource {
         return img.absUrl("src")
     }
 
+    fun searchUrl(keyword: String): String =
+        "$BASE/tim-kiem?q=${java.net.URLEncoder.encode(keyword, "UTF-8")}"
+
     fun search(keyword: String): List<Comic> {
         val q = java.net.URLEncoder.encode(keyword, "UTF-8")
-        // 1) Do form tim kiem that tren trang chu cua web -> dung dung action + ten tham so
+        // 1) Duong thang nhat (da kiem chung tren trinh duyet): /tim-kiem?q=
+        try {
+            val doc = fetchDoc("$BASE/tim-kiem?q=$q")
+            val list = parseList(doc).ifEmpty { parseListLoose(doc) }
+            if (list.isNotEmpty()) return list
+        } catch (e: Exception) {
+            // Thu cac cach ben duoi
+        }
+        // 2) Do form tim kiem that tren trang chu cua web -> dung dung action + ten tham so
         try {
             val home = fetchDoc("$BASE/")
             for (form in home.select("form")) {
@@ -112,7 +123,7 @@ object TruyenQQSource {
         } catch (e: Exception) {
             // Bo qua, thu cac mau URL du phong ben duoi
         }
-        // 2) Cac mau URL tim kiem pho bien cua ho web nay
+        // 3) Cac mau URL tim kiem pho bien cua ho web nay
         for (pattern in listOf(
             "$BASE/tim-kiem?q=$q",
             "$BASE/tim-kiem.html?q=$q",

@@ -2,6 +2,10 @@ package com.example.truyenreader
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,8 +24,15 @@ class HomeFragment : Fragment() {
 
     private lateinit var adapter: ComicGridAdapter
     private val comics = ArrayList<Comic>()
+    private val latestBackup = ArrayList<Comic>()
     private var page = 1
     private var loading = false
+
+    // Goi y tim kiem theo tung phim go
+    private val searchHandler = Handler(Looper.getMainLooper())
+    private var pendingSearch: Runnable? = null
+    private var searchGen = 0
+    private var searching = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -37,6 +48,8 @@ class HomeFragment : Fragment() {
 
         val swipe = view.findViewById<SwipeRefreshLayout>(R.id.swipeRefresh)
         swipe.setOnRefreshListener {
+            // Keo lam moi = thoat che do tim kiem, tai lai danh sach moi nhat
+            exitSearchMode()
             page = 1
             loadPage(reset = true) { swipe.isRefreshing = false }
         }
@@ -50,10 +63,27 @@ class HomeFragment : Fragment() {
         et.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val q = et.text.toString().trim()
-                if (q.isNotEmpty()) doSearch(q)
+                if (q.isNotEmpty()) doSearch(q, manual = true)
                 true
             } else false
         }
+        // Go toi dau tim toi do: cho 450ms sau phim go cuoi cung roi moi tim
+        et.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val q = s?.toString()?.trim().orEmpty()
+                pendingSearch?.let { searchHandler.removeCallbacks(it) }
+                if (q.isEmpty()) {
+                    exitSearchMode()
+                    restoreLatest()
+                    return
+                }
+                val r = Runnable { doSearch(q, manual = false) }
+                pendingSearch = r
+                searchHandler.postDelayed(r, 450)
+            }
+        })
 
         loadPage(reset = true)
     }
@@ -93,6 +123,8 @@ class HomeFragment : Fragment() {
                     val known = comics.map { it.url }.toSet()
                     comics.addAll(list.filter { it.url !in known })
                     adapter.submit(ArrayList(comics))
+                    latestBackup.clear()
+                    latestBackup.addAll(comics)
                 } else {
                     // Bat ky loi/ket qua rong nao cung thu duong WebView truoc khi bao loi
                     loadViaWebView(reset)
@@ -122,21 +154,68 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun doSearch(keyword: String) {
+    private fun doSearch(keyword: String, manual: Boolean) {
+        val gen = ++searchGen
+        searching = true
+        view?.findViewById<Button>(R.id.btnLoadMore)?.visibility = View.GONE
         setLoading(true)
         thread {
             val list = TruyenQQSource.search(keyword)
             activity?.runOnUiThread {
-                setLoading(false)
-                if (list.isEmpty()) {
-                    Toast.makeText(requireContext(), "Không tìm thấy truyện phù hợp", Toast.LENGTH_SHORT).show()
+                if (gen != searchGen) return@runOnUiThread // Da co truy van moi hon
+                if (list.isNotEmpty()) {
+                    setLoading(false)
+                    showSearchResults(list)
                 } else {
-                    comics.clear()
-                    comics.addAll(list)
-                    adapter.submit(ArrayList(comics))
-                    page = 1
+                    // Duong Jsoup rong/bi chan -> thu duong WebView (qua duoc Cloudflare)
+                    searchViaWebView(keyword, gen, manual)
                 }
             }
+        }
+    }
+
+    /** Du phong cho tim kiem: tai trang ket qua bang WebView roi parse HTML da render. */
+    private fun searchViaWebView(keyword: String, gen: Int, manual: Boolean) {
+        if (!isAdded) return
+        WebFetcher.fetchHtml(requireContext(), TruyenQQSource.searchUrl(keyword)) { html ->
+            if (gen != searchGen) return@fetchHtml
+            setLoading(false)
+            val list = if (html.isNullOrEmpty()) emptyList()
+            else {
+                val doc = TruyenQQSource.parseHtml(html, TruyenQQSource.BASE)
+                TruyenQQSource.parseList(doc).ifEmpty { TruyenQQSource.parseListLoose(doc) }
+            }
+            if (list.isNotEmpty()) {
+                showSearchResults(list)
+            } else if (manual) {
+                Toast.makeText(requireContext(), "Không tìm thấy truyện phù hợp", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showSearchResults(list: List<Comic>) {
+        comics.clear()
+        comics.addAll(list)
+        adapter.submit(ArrayList(comics))
+    }
+
+    private fun exitSearchMode() {
+        searchGen++ // Huy moi ket qua tim kiem dang bay ve
+        pendingSearch?.let { searchHandler.removeCallbacks(it) }
+        searching = false
+        view?.findViewById<Button>(R.id.btnLoadMore)?.visibility = View.VISIBLE
+        val et = view?.findViewById<EditText>(R.id.etSearch)
+        if (!et?.text.isNullOrEmpty()) et?.text?.clear()
+    }
+
+    private fun restoreLatest() {
+        if (latestBackup.isNotEmpty()) {
+            comics.clear()
+            comics.addAll(latestBackup)
+            adapter.submit(ArrayList(comics))
+        } else {
+            page = 1
+            loadPage(reset = true)
         }
     }
 }
